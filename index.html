@@ -22,7 +22,79 @@
             background-size: 36px 36px;
             font-family: 'Segoe UI', 'Quicksand', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
             padding: 24px;
+            padding-top: 90px;  /* 为顶部侧边栏留出空间 */
             position: relative;
+        }
+        /* 顶部侧边栏 */
+        .top-sidebar {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 28px;
+            background: rgba(255, 245, 248, 0.75);
+            backdrop-filter: blur(12px);
+            padding: 8px 28px;
+            border-radius: 80px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 220, 230, 0.6);
+            z-index: 1100;
+        }
+        .circle-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: #fff0f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid #f5cfdd;
+            transition: all 0.2s ease;
+        }
+        .circle-btn:active {
+            transform: scale(0.94);
+        }
+        .circle-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .circle-placeholder {
+            font-size: 1.8rem;
+            font-weight: 300;
+            color: #e1a5bc;
+        }
+        .center-icon {
+            width: 60px;
+            height: 60px;
+            background: #fdeef4;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 600;
+            color: #e587a3;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid #f5cfdd;
+            transition: all 0.2s ease;
+        }
+        .center-icon:active {
+            transform: scale(0.94);
+        }
+        @media (max-width: 700px) {
+            .top-sidebar { gap: 18px; padding: 6px 20px; }
+            .circle-btn { width: 44px; height: 44px; }
+            .center-icon { width: 52px; height: 52px; font-size: 1.8rem; }
+            .circle-placeholder { font-size: 1.5rem; }
+            body { padding-top: 80px; }
         }
         .container {
             max-width: 1300px;
@@ -91,7 +163,6 @@
             z-index: 1;
             pointer-events: none;
         }
-        /* 淡入淡出动画，避免闪烁 */
         .stack-card.exit-active {
             animation: cardFadeOut 0.2s ease forwards;
         }
@@ -295,7 +366,6 @@
             font-weight: 700;
             margin-right: 6px;
         }
-        /* 音乐侧边栏磨砂 */
         .music-sidebar {
             position: fixed;
             top: 20px;
@@ -537,6 +607,24 @@
     </style>
 </head>
 <body>
+
+<!-- 顶部侧边栏 -->
+<div class="top-sidebar">
+    <div class="circle-btn" id="leftCircle">
+        <img id="leftCircleImg" src="" alt="user image" style="display: none;">
+        <span class="circle-placeholder">┼</span>
+        <input type="file" id="leftCircleUpload" accept="image/*" style="display: none;">
+    </div>
+    <div class="center-icon" id="centerIcon">
+        <span id="centerIconText">♡</span>
+    </div>
+    <div class="circle-btn" id="rightCircle">
+        <img id="rightCircleImg" src="" alt="user image" style="display: none;">
+        <span class="circle-placeholder">┼</span>
+        <input type="file" id="rightCircleUpload" accept="image/*" style="display: none;">
+    </div>
+</div>
+
 <div class="container">
     <div class="task-panel">
         <div class="task-stage" id="taskStage">
@@ -679,6 +767,17 @@
     const newTaskDesc = document.getElementById('newTaskDesc');
     const addTaskModalBtn = document.getElementById('addTaskBtn');
     const closeModalBtn = document.getElementById('closeModalBtn');
+
+    // 顶部侧边栏元素
+    const leftCircle = document.getElementById('leftCircle');
+    const rightCircle = document.getElementById('rightCircle');
+    const leftUpload = document.getElementById('leftCircleUpload');
+    const rightUpload = document.getElementById('rightCircleUpload');
+    const leftImg = document.getElementById('leftCircleImg');
+    const rightImg = document.getElementById('rightCircleImg');
+    const leftPlaceholder = leftCircle.querySelector('.circle-placeholder');
+    const rightPlaceholder = rightCircle.querySelector('.circle-placeholder');
+    const centerIconText = document.getElementById('centerIconText');
 
     function showToast(msg, duration = 1800) {
         if (toastTimeout) clearTimeout(toastTimeout);
@@ -882,7 +981,6 @@
                 const clearBtn = card.querySelector('#clearHistoryBtnCard');
                 if (clearBtn) clearBtn.addEventListener('click', resetAllData);
             }
-            // 为可编辑元素添加双击编辑功能（未完待续卡片不可编辑）
             if (type !== 'future') {
                 const editableTitles = card.querySelectorAll('.editable-title, .editable-tag, .editable-footer');
                 editableTitles.forEach(el => {
@@ -907,12 +1005,10 @@
                             const newText = input.value.trim();
                             if (newText) {
                                 el.innerText = newText;
-                                // 保存到 localStorage
                                 const cardType = el.dataset.card;
                                 const field = el.dataset.field;
                                 if (cardType && field) {
-                                    const key = `card_${cardType}_${field}`;
-                                    localStorage.setItem(key, newText);
+                                    localStorage.setItem(`card_${cardType}_${field}`, newText);
                                 }
                             } else {
                                 el.innerText = currentText;
@@ -925,7 +1021,6 @@
                             }
                         });
                     });
-                    // 加载保存的自定义文案
                     const cardType = el.dataset.card;
                     const field = el.dataset.field;
                     if (cardType && field) {
@@ -956,7 +1051,6 @@
         }
     }
 
-    // 修复卡片切换防抖与重复触发
     let pendingSwitch = false;
     function switchToNext() {
         if (isAnimating || pendingSwitch) return;
@@ -984,7 +1078,6 @@
         };
         currentCard.addEventListener('animationend', onFinish, { once: true });
         newCard.addEventListener('animationend', onFinish, { once: true });
-        // 安全后备：如果动画未触发，强制完成
         setTimeout(() => {
             if (isAnimating) {
                 currentCard.classList.remove('exit-active');
@@ -1218,6 +1311,72 @@
         newTaskDesc.value = "";
         showToast("✅ 新任务已添加", 1000);
     }
+
+    // 顶部侧边栏功能
+    function handleImageUpload(file, imgElement, placeholder) {
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imgElement.src = e.target.result;
+                imgElement.style.display = 'block';
+                placeholder.style.display = 'none';
+                localStorage.setItem(imgElement.id + '_data', e.target.result);
+            };
+            reader.readAsDataURL(file);
+        } else if (file) {
+            alert('请选择图片文件');
+        }
+    }
+    leftCircle.addEventListener('click', () => leftUpload.click());
+    rightCircle.addEventListener('click', () => rightUpload.click());
+    leftUpload.addEventListener('change', (e) => {
+        if (e.target.files.length) handleImageUpload(e.target.files[0], leftImg, leftPlaceholder);
+        leftUpload.value = '';
+    });
+    rightUpload.addEventListener('change', (e) => {
+        if (e.target.files.length) handleImageUpload(e.target.files[0], rightImg, rightPlaceholder);
+        rightUpload.value = '';
+    });
+
+    centerIconText.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        const current = centerIconText.innerText;
+        const input = document.createElement('input');
+        input.value = current;
+        input.style.width = '60px';
+        input.style.textAlign = 'center';
+        input.style.background = '#fffafc';
+        input.style.border = '1px solid #f5cfdd';
+        input.style.borderRadius = '40px';
+        input.style.fontSize = '1.2rem';
+        const originalHtml = centerIconText.innerHTML;
+        centerIconText.innerHTML = '';
+        centerIconText.appendChild(input);
+        input.focus();
+        const save = () => {
+            let newVal = input.value.trim();
+            if (newVal === '') newVal = '♡';
+            centerIconText.innerText = newVal;
+            localStorage.setItem('centerIcon', newVal);
+        };
+        input.addEventListener('blur', save);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') save();
+        });
+    });
+    const savedIcon = localStorage.getItem('centerIcon');
+    if (savedIcon) centerIconText.innerText = savedIcon;
+    function loadSavedImage(imgId, placeholder) {
+        const saved = localStorage.getItem(imgId + '_data');
+        if (saved) {
+            const img = document.getElementById(imgId);
+            img.src = saved;
+            img.style.display = 'block';
+            if (placeholder) placeholder.style.display = 'none';
+        }
+    }
+    loadSavedImage('leftCircleImg', leftPlaceholder);
+    loadSavedImage('rightCircleImg', rightPlaceholder);
 
     function init() {
         loadAllData();
