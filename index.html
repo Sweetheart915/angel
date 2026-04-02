@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>少女心打卡机</title>
+    <style>
+        /* ===== 所有样式保持不变 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        input, textarea, [contenteditable] {
+            user-select: text;
+        }
+        body {
+            min-height: 100vh;
+            background: #fce8ef;
+            background-image: radial-gradient(circle at 20px 20px, rgba(255,255,240,0.5) 2px, transparent 2px);
+            background-size: 30px 30px;
+            font-family: 'Segoe UI', 'Quicksand', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+            padding: 20px;
+            position: relative;
+        }
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 28px;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+        }
+        .task-panel {
+            flex: 1.4;
+            min-width: 280px;
+            background: #fffbfd;
+            border-radius: 48px 32px 56px 40px;
+            padding: 28px 24px 32px;
+            box-shadow: 8px 12px 24px rgba(140, 100, 110, 0.08);
+            border: 1px solid #f8e2ea;
+            transform: rotate(-0.3deg);
+        }
+        .card-stack-area {
+            flex: 1;
+            min-width: 340px;
+            position: relative;
+            height: 560px;
+        }
+        .stack-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        .stack-card {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff9fb;
+            border-radius: 32px 48px 32px 56px;
+            padding: 22px 20px 28px;
+            box-shadow: 12px 15px 28px rgba(100, 70, 80, 0.08);
+            border: 1px solid #f5dee6;
+            backdrop-filter: blur(2px);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            will-change: transform, opacity;
+            backface-visibility: hidden;
+        }
+        .stack-card[data-type="history"] { background: #fef7fa; border-bottom: 6px solid #efd3df; }
+        .stack-card[data-type="chat"] { background: #fff9fb; border-left: 6px solid #f3cedb; }
+        .stack-card[data-type="future"] { background: #fff5f8; border-right: 6px solid #f5d0dd; }
+        .stack-card.active {
+            opacity: 1;
+            transform: translateX(0) translateY(0) rotate(0deg) scale(1);
+            z-index: 10;
+            box-shadow: 0 20px 35px rgba(100, 70, 80, 0.15);
+            pointer-events: auto;
+        }
+        .stack-card.next {
+            opacity: 0.7;
+            transform: translateX(12px) translateY(8px) rotate(2deg) scale(0.98);
+            z-index: 5;
+            filter: blur(0.5px);
+            pointer-events: none;
+        }
+        .stack-card.bottom {
+            opacity: 0.4;
+            transform: translateX(24px) translateY(16px) rotate(4deg) scale(0.96);
+            z-index: 1;
+            filter: blur(1px);
+            pointer-events: none;
+        }
+        .stack-card.exit-active {
+            animation: cardExit 0.35s ease forwards;
+        }
+        .stack-card.enter-active {
+            animation: cardEnter 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
+        }
+        @keyframes cardExit {
+            0% { opacity: 1; transform: translateX(0) rotate(0deg) scale(1); z-index: 10; }
+            100% { opacity: 0; transform: translateX(-40px) rotate(-12deg) scale(0.85); z-index: 8; }
+        }
+        @keyframes cardEnter {
+            0% { opacity: 0; transform: translateX(40px) rotate(8deg) scale(0.9); z-index: 9; }
+            100% { opacity: 1; transform: translateX(0) rotate(0deg) scale(1); z-index: 10; }
+        }
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 8px;
+            border-bottom: 1.5px dashed #f5cfdd;
+            padding-bottom: 12px;
+        }
+        .note-header h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #b98499;
+        }
+        .cute-tag {
+            font-size: 0.75rem;
+            background: #fdeef4;
+            padding: 4px 12px;
+            border-radius: 60px;
+            color: #cb98ad;
+        }
+        .chat-messages {
+            height: 280px;
+            overflow-y: auto;
+            margin: 16px 0 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .msg-bubble {
+            max-width: 85%;
+            padding: 8px 14px;
+            border-radius: 28px;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        .user-msg {
+            background: #f5dfe8;
+            color: #8c6274;
+            align-self: flex-end;
+            border-bottom-right-radius: 6px;
+        }
+        .bot-msg {
+            background: #ffffffcc;
+            color: #b0798f;
+            align-self: flex-start;
+            border-bottom-left-radius: 6px;
+            border: 1px solid #fadce8;
+        }
+        .chat-input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .chat-input-area input {
+            flex: 1;
+            background: #fffafc;
+            border: 1px solid #f5cfdd;
+            border-radius: 60px;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            color: #a46c7e;
+        }
+        .chat-input-area button {
+            background: #f1cfdd;
+            border: none;
+            border-radius: 60px;
+            padding: 0 20px;
+            font-weight: 600;
+            color: #aa6f86;
+            cursor: pointer;
+        }
+        .history-list {
+            max-height: 280px;
+            overflow-y: auto;
+            margin: 16px 0;
+            list-style: none;
+        }
+        .history-list li {
+            background: #fff3f8;
+            margin: 8px 0;
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid #f3c2d2;
+        }
+        .future-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 80%;
+            text-align: center;
+            color: #cb98ad;
+            font-size: 1.2rem;
+        }
+        .slider-arrows {
+            display: flex;
+            justify-content: center;
+            gap: 28px;
+            margin-top: 20px;
+        }
+        .arrow-btn {
+            background: #fceef4;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            width: 52px;
+            height: 52px;
+            border-radius: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #cd97af;
+            transition: all 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+        }
+        .arrow-btn:active {
+            transform: scale(0.92);
+        }
+        .task-stage {
+            background: #fff7f9;
+            border-radius: 40px 28px 48px 32px;
+            padding: 28px 20px;
+            margin: 24px 0;
+            text-align: center;
+            border: 1px solid #f8e2ea;
+            box-shadow: inset 0 0 0 1px #fff, 6px 8px 16px rgba(130,90,100,0.05);
+        }
+        .task-emoji { font-size: 4rem; margin-bottom: 10px; }
+        .task-name { font-size: 1.8rem; font-weight: 700; color: #bf7d98; margin: 8px 0; }
+        .task-desc { color: #d49aaf; font-size: 0.9rem; }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin: 24px 0 18px;
+        }
+        .btn {
+            border: none;
+            background: #fceef4;
+            padding: 10px 20px;
+            border-radius: 60px;
+            font-weight: 600;
+            color: #bc7d97;
+            cursor: pointer;
+            transition: all 0.15s cubic-bezier(0.34, 1.2, 0.64, 1);
+            border: 1px solid #fae0ea;
+        }
+        .btn:active {
+            transform: scale(0.96);
+        }
+        .btn-primary {
+            background: #efd4e0;
+            color: #a2677e;
+        }
+        .counter {
+            background: #fff7f9;
+            padding: 8px 20px;
+            border-radius: 60px;
+            display: inline-block;
+            font-size: 0.9rem;
+            color: #bf859d;
+        }
+        .counter span {
+            color: #db9eb5;
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-right: 6px;
+        }
+        .music-sidebar {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .music-toggle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255,245,248,0.95);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #ffd9e4;
+        }
+        .music-toggle img {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            border-radius: 50%;
+        }
+        .music-toggle:active {
+            transform: scale(0.92);
+        }
+        .music-panel {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            width: 280px;
+            background: #fffafc;
+            backdrop-filter: blur(16px);
+            border-radius: 32px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.1);
+            border: 1px solid #f5dee6;
+            padding: 16px;
+            transform: translateX(120%);
+            transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            z-index: 999;
+        }
+        .music-panel.open {
+            transform: translateX(0);
+        }
+        .song-title {
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #b98499;
+            margin-bottom: 20px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 8px;
+        }
+        .controls-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .ctrl-icon {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #bc7d97;
+            transition: all 0.15s cubic-bezier(0.34, 1.2, 0.64, 1);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ctrl-icon:active {
+            transform: scale(0.88);
+            background: #fdeef4;
+        }
+        .ctrl-icon.active {
+            color: #e587a3;
+            text-shadow: 0 0 4px rgba(229,135,163,0.3);
+        }
+        .playlist-area {
+            border-top: 1px solid #f5cfdd;
+            padding-top: 12px;
+            margin-top: 4px;
+        }
+        .add-song {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .add-song input {
+            flex: 1;
+            background: #fffafc;
+            border: 1px solid #f5cfdd;
+            border-radius: 60px;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            color: #a46c7e;
+        }
+        .add-song button {
+            background: #f1cfdd;
+            border: none;
+            border-radius: 60px;
+            padding: 6px 14px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #aa6f86;
+            cursor: pointer;
+        }
+        .song-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .song-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 6px;
+            font-size: 0.8rem;
+            color: #b1768d;
+            cursor: pointer;
+            border-bottom: 1px solid #ffe4ed;
+        }
+        .song-item:hover {
+            background: #fdeef4;
+            border-radius: 28px;
+        }
+        .song-item.now-playing {
+            background: #fbe2ec;
+            font-weight: 600;
+            color: #c25a7a;
+        }
+        .delete-song {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            color: #d69bb0;
+            padding: 0 6px;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.2s;
+        }
+        .modal.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-content {
+            background: #fffbfd;
+            border-radius: 48px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 24px;
+            border: 1px solid #f8e2ea;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.1);
+        }
+        .modal-content h3 {
+            color: #b98499;
+            margin-bottom: 16px;
+        }
+        .task-edit-list {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+        .task-edit-item {
+            background: #fff7f9;
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 28px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .task-edit-item input {
+            background: #fffafc;
+            border: 1px solid #f5cfdd;
+            border-radius: 40px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            flex: 1;
+        }
+        .task-edit-item button {
+            background: #f1cfdd;
+            border: none;
+            border-radius: 40px;
+            padding: 5px 12px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .add-task-form {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+            border-top: 1px solid #f5cfdd;
+            padding-top: 16px;
+        }
+        .add-task-form input {
+            flex: 1;
+            background: #fffafc;
+            border: 1px solid #f5cfdd;
+            border-radius: 40px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+        }
+        .toast-msg {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff3f8f2;
+            color: #c4829c;
+            padding: 8px 24px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            backdrop-filter: blur(4px);
+            z-index: 3000;
+            white-space: nowrap;
+        }
+        @media (max-width: 800px) {
+            .card-stack-area { height: 560px; }
+            .toast-msg { white-space: normal; width: 80%; text-align: center; }
+            .music-panel { width: 260px; right: 10px; top: 80px; }
+            .music-toggle { width: 50px; height: 50px; top: 10px; right: 10px; }
+            .music-toggle img { width: 40px; height: 40px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="task-panel">
+        <div class="task-stage" id="taskStage">
+            <div class="task-emoji" id="taskEmoji">🤍</div>
+            <div class="task-name" id="taskName">点击抽取任务</div>
+            <div class="task-desc" id="taskDesc">🌸 按一下「随机抽取任务」开始冒险 🌸</div>
+        </div>
+        <div class="button-group">
+            <button class="btn btn-primary" id="randomTaskBtn">🎲 随机抽取任务</button>
+            <button class="btn btn-primary" id="completeBtn">✅ 打卡完成 +1</button>
+            <button class="btn" id="resetDataBtn">🔄 重置所有打卡</button>
+            <button class="btn" id="editTasksBtn">📝 编辑任务</button>
+        </div>
+        <div style="text-align: center;">
+            <div class="counter">🏆 累计打卡 <span id="totalCount">0</span> 次</div>
+        </div>
+        <div style="font-size: 0.65rem; text-align: center; margin-top: 18px; color:#cca1b3;">☆₊⁺一些ā ē ī ō ǖ ૮˵>ㅿ<˵ა♪‧⁺</div>
+    </div>
+
+    <div class="card-stack-area">
+        <div class="stack-container" id="stackContainer"></div>
+        <div class="slider-arrows">
+            <button class="arrow-btn" id="prevNoteBtn">◀</button>
+            <button class="arrow-btn" id="nextNoteBtn">▶</button>
+        </div>
+    </div>
+</div>
+
+<div class="music-sidebar">
+    <div class="music-toggle" id="musicToggle">
+        <img src="https://i.postimg.cc/NjLVm6g1/wu-biao-ti925-20260402082054.png" alt="音乐">
+    </div>
+    <div class="music-panel" id="musicPanel">
+        <div class="song-title" id="currentSongTitle">Come Around Me</div>
+        <div class="controls-row">
+            <button class="ctrl-icon" id="loopSingleBtn" title="单曲循环">∞</button>
+            <button class="ctrl-icon" id="playPauseBtn" title="播放/暂停">▶️</button>
+            <button class="ctrl-icon" id="loopListBtn" title="列表循环">∝</button>
+        </div>
+        <div class="playlist-area">
+            <div class="add-song">
+                <input type="text" id="newSongUrl" placeholder="mp3 链接" autocomplete="off">
+                <button id="addSongBtn">➕ 添加</button>
+            </div>
+            <div class="song-list" id="songList"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="taskModal">
+    <div class="modal-content">
+        <h3>📝 编辑任务库</h3>
+        <div id="taskEditList"></div>
+        <div class="add-task-form">
+            <input type="text" id="newTaskEmoji" placeholder="emoji (如 📖)" value="✨">
+            <input type="text" id="newTaskName" placeholder="任务名称">
+            <input type="text" id="newTaskDesc" placeholder="简短描述">
+            <button id="addTaskBtn" style="background:#efd4e0;">➕ 新增</button>
+        </div>
+        <div style="text-align: right; margin-top: 16px;">
+            <button id="closeModalBtn" class="btn">关闭</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast-msg" style="opacity:0; visibility: hidden;"></div>
+
+<script>
+    // ========== 颜文字库 ==========
+    const kaomojiList = ["(｡♡‿♡｡)", "(◕ᴗ◕✿)", "(´｡• ᵕ •｡`)", "૮˵>ㅿ<˵ა", "٩(ˊᗜˋ*)و", "(⑅˘͈ ᵕ ˘͈ )", "☆*:.｡.o(≧▽≦)o.｡.:*☆", "(❁´◡`❁)", "˗ˋˏ ♡ ˎˊ˗", "ฅ⁺˚"];
+    function getRandomKaomoji() { return kaomojiList[Math.floor(Math.random() * kaomojiList.length)]; }
+
+    // ========== 默认任务库 ==========
+    const defaultTasks = [
+        { emoji: "📖", name: "读5页书", desc: "随便一本书，沉浸5页，感受文字魅力" },
+        { emoji: "💪", name: "10个开合跳", desc: "激活身体，血液循环 UP！" },
+        { emoji: "🎨", name: "画一幅涂鸦", desc: "灵魂画手，随便画什么都行" },
+        { emoji: "📝", name: "写三行日记", desc: "记录此刻的心情或想法" },
+        { emoji: "🧹", name: "整理桌面5分钟", desc: "清爽环境，清爽心情" },
+        { emoji: "🎵", name: "听一首新歌", desc: "尝试没听过的风格，放松耳朵" },
+        { emoji: "📞", name: "给好友发条消息", desc: "问候或分享无聊，有人回应就不无聊啦" },
+        { emoji: "🧘", name: "深呼吸1分钟", desc: "478呼吸法，立刻平静" },
+        { emoji: "☕", name: "泡一杯热饮", desc: "茶/咖啡/热可可，慢慢品尝" },
+        { emoji: "💡", name: "学一个冷知识", desc: "搜索一个有趣的知识，开阔眼界" },
+        { emoji: "🎮", name: "玩一局小游戏", desc: "网页小游戏或手机休闲游戏" },
+        { emoji: "🌱", name: "照顾植物/绿植", desc: "浇水擦叶，感受生命" },
+        { emoji: "✍️", name: "写明日计划", desc: "简单规划明天三件事" },
+        { emoji: "🤝", name: "和D老师聊天", desc: "右侧聊天室，和D老师唠嗑~ 聊完记得打卡" },
+        { emoji: "📸", name: "拍一张窗外风景", desc: "观察光影，记录日常美好" },
+        { emoji: "🕺", name: "自由舞动1分钟", desc: "随便扭动，释放压力" },
+        { emoji: "🧩", name: "完成一个小 puzzle", desc: "数独/拼图/魔方，活跃大脑" },
+        { emoji: "🗣️", name: "大声朗读一段文字", desc: "念首诗或小说片段" },
+        { emoji: "🧠", name: "冥想3分钟", desc: "放空思绪，关注呼吸" },
+        { emoji: "🍳", name: "做一道简单料理", desc: "煎蛋/水果拼盘，犒劳自己" }
+    ];
+
+    let taskLibrary = [...defaultTasks];
+    let totalCompleted = 0;
+    let completedHistory = [];
+    let currentTask = null;
+
+    let audio = new Audio();
+    let musicList = [];
+    let currentMusicIndex = -1;
+    let isPlaying = false;
+    let loopMode = 'none';
+    let autoPlayAttempted = false;
+
+    const taskEmojiSpan = document.getElementById('taskEmoji');
+    const taskNameSpan = document.getElementById('taskName');
+    const taskDescSpan = document.getElementById('taskDesc');
+    const totalCountSpan = document.getElementById('totalCount');
+    const randomBtn = document.getElementById('randomTaskBtn');
+    const completeBtn = document.getElementById('completeBtn');
+    const resetDataBtn = document.getElementById('resetDataBtn');
+    const editTasksBtn = document.getElementById('editTasksBtn');
+    const toastEl = document.getElementById('toast');
+    let toastTimeout = null;
+
+    const stackContainer = document.getElementById('stackContainer');
+    let cardOrder = ['history', 'chat', 'future'];  // 顺序：历史、聊天、未完待续
+    let isAnimating = false;
+    let cards = {};
+
+    let chatMessagesDiv, chatInput, sendChatBtn;
+
+    const musicToggle = document.getElementById('musicToggle');
+    const musicPanel = document.getElementById('musicPanel');
+    const currentSongTitleSpan = document.getElementById('currentSongTitle');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const loopSingleBtn = document.getElementById('loopSingleBtn');
+    const loopListBtn = document.getElementById('loopListBtn');
+    const addSongBtn = document.getElementById('addSongBtn');
+    const newSongUrlInput = document.getElementById('newSongUrl');
+    const songListDiv = document.getElementById('songList');
+
+    const taskModal = document.getElementById('taskModal');
+    const taskEditListDiv = document.getElementById('taskEditList');
+    const newTaskEmoji = document.getElementById('newTaskEmoji');
+    const newTaskName = document.getElementById('newTaskName');
+    const newTaskDesc = document.getElementById('newTaskDesc');
+    const addTaskModalBtn = document.getElementById('addTaskBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    function showToast(msg, duration = 1800) {
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastEl.style.opacity = "1";
+        toastEl.style.visibility = "visible";
+        toastEl.innerText = msg;
+        toastTimeout = setTimeout(() => {
+            toastEl.style.opacity = "0";
+            toastEl.style.visibility = "hidden";
+        }, duration);
+    }
+
+    function saveAllData() {
+        localStorage.setItem('taskLibrary', JSON.stringify(taskLibrary));
+        localStorage.setItem('totalCompleted', totalCompleted);
+        localStorage.setItem('completedHistory', JSON.stringify(completedHistory));
+        localStorage.setItem('musicList', JSON.stringify(musicList.map(s => ({ name: s.name, url: s.url }))));
+    }
+    function loadAllData() {
+        const savedTasks = localStorage.getItem('taskLibrary');
+        if (savedTasks) {
+            try { taskLibrary = JSON.parse(savedTasks); if (!Array.isArray(taskLibrary)) taskLibrary = [...defaultTasks]; } catch(e) { taskLibrary = [...defaultTasks]; }
+        } else { taskLibrary = [...defaultTasks]; }
+        const savedTotal = localStorage.getItem('totalCompleted');
+        if (savedTotal !== null) totalCompleted = parseInt(savedTotal, 10);
+        const savedHistory = localStorage.getItem('completedHistory');
+        if (savedHistory) { try { completedHistory = JSON.parse(savedHistory); if (!Array.isArray(completedHistory)) completedHistory = []; } catch(e) { completedHistory = []; } }
+        const savedMusic = localStorage.getItem('musicList');
+        if (savedMusic) {
+            try { musicList = JSON.parse(savedMusic); } catch(e) { musicList = []; }
+        }
+        if (!musicList.length) {
+            musicList = [{ name: "Come Around Me", url: "https://videotourl.com/audio/1775087116894-693bb35a-39a7-4dbb-933d-b12d685a98e5.mp3" }];
+        }
+        totalCountSpan.innerText = totalCompleted;
+        updateHistoryUI();
+    }
+
+    function updateHistoryUI() {
+        const historyListEl = cards.history?.querySelector('.history-list');
+        if (!historyListEl) return;
+        if (completedHistory.length === 0) {
+            historyListEl.innerHTML = '<li style="justify-content:center;">🍰 暂无打卡</li>';
+            return;
+        }
+        const recent = [...completedHistory].reverse().slice(0, 20);
+        historyListEl.innerHTML = recent.map(item => `<li><span>${item.taskEmoji || '🎀'}</span><span><strong>${item.taskName}</strong> · ${item.timeStr}</span></li>`).join('');
+    }
+
+    function addHistoryRecord(taskObj) {
+        const now = new Date();
+        const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+        completedHistory.push({ taskName: taskObj.name, taskEmoji: taskObj.emoji, timeStr, timestamp: now.getTime() });
+        if (completedHistory.length > 100) completedHistory.shift();
+        saveAllData();
+        updateHistoryUI();
+    }
+
+    function pickRandomTask() {
+        if (!taskLibrary.length) return;
+        const idx = Math.floor(Math.random() * taskLibrary.length);
+        currentTask = { ...taskLibrary[idx] };
+        taskEmojiSpan.innerText = currentTask.emoji;
+        taskNameSpan.innerText = currentTask.name;
+        taskDescSpan.innerText = currentTask.desc;
+    }
+
+    function completeCurrentTask() {
+        if (!currentTask) { showToast("🌸 还没有任务呢！先点击「随机抽取任务」吧 " + getRandomKaomoji(), 1500); return; }
+        totalCompleted++;
+        addHistoryRecord(currentTask);
+        totalCountSpan.innerText = totalCompleted;
+        showToast(`✅ 完成「${currentTask.name}」 +1 次打卡！${getRandomKaomoji()}`, 1800);
+        if (currentTask.name === "和D老师聊天") {
+            showToast("💬 聊天任务完成！去右侧和D老师多说几句吧～ " + getRandomKaomoji(), 2000);
+            if (cards.chat) {
+                const chatDiv = cards.chat.querySelector('.chat-messages');
+                if (chatDiv) {
+                    const botMsg = document.createElement('div');
+                    botMsg.className = 'msg-bubble bot-msg';
+                    botMsg.innerText = `🎀 哇！你打卡了「和D老师聊天」！现在尽情闲聊吧，我永远在线陪你～ ${getRandomKaomoji()}`;
+                    chatDiv.appendChild(botMsg);
+                    chatDiv.scrollTop = chatDiv.scrollHeight;
+                }
+            }
+        }
+        pickRandomTask();
+        document.querySelector('.task-stage')?.classList.add('glow');
+        setTimeout(() => document.querySelector('.task-stage')?.classList.remove('glow'), 400);
+        saveAllData();
+    }
+
+    function resetAllData() {
+        if (confirm("💭 确定重置所有打卡记录吗？")) {
+            totalCompleted = 0;
+            completedHistory = [];
+            totalCountSpan.innerText = 0;
+            updateHistoryUI();
+            showToast("🍬 打卡数据已重置 " + getRandomKaomoji(), 1500);
+            saveAllData();
+        }
+    }
+
+    // 聊天机器人
+    const botReplies = [
+        "🎀 无聊就抽个软萌任务吧！", "🌸 完成打卡真的超有成就感！", "💖 和我聊天也是任务之一哦！", 
+        "🍰 送你一朵小花花🌷", "📖 想看一页书吗？", "🎵 放首甜甜的歌，跳个扭扭舞怎么样？",
+        "💬 今天有什么小开心的事呀？", "🧸 我们可以一起想个新任务！", "🍵 喝口热饮，放松一下",
+        "✨ 保持好奇，每一天都是冒险！", "你的出现像阴雨天递过来的伞៸៸ᐳ•𖥦•៸៸ᐳ੭ﾞ", "其实你是一个毛线团 所以我总是想缠住你 ๑'ᵕ'๑"
+    ];
+    function getBotReply(userMsg) {
+        const lower = userMsg.toLowerCase();
+        let reply = "";
+        if (lower.includes('任务') || lower.includes('打卡')) reply = "🎲 点左边「随机抽取任务」就能抽到软乎乎任务啦～ " + getRandomKaomoji();
+        else if (lower.includes('无聊')) reply = "🥺 无聊小怪兽出现啦！快抽个任务动动手 " + getRandomKaomoji();
+        else if (lower.includes('谢谢')) reply = "❤️ 不客气！希望你的每一天都像棉花糖一样甜～ " + getRandomKaomoji();
+        else if (lower.includes('累') || lower.includes('疲惫')) reply = "😴 累的话就选「冥想3分钟」或「深呼吸」 " + getRandomKaomoji();
+        else if (lower.includes('可爱') || lower.includes('粉色')) reply = "🎀 是呀！粉粉的界面和可爱的你，超配的～ " + getRandomKaomoji();
+        else reply = botReplies[Math.floor(Math.random() * botReplies.length)] + " " + getRandomKaomoji();
+        if (Math.random() < 0.2 && currentTask) reply += ` 当前的任务是「${currentTask.name}」✨ 完成它就可以打卡+1啦！`;
+        return reply;
+    }
+    function setupChatEvents(chatCard) {
+        chatMessagesDiv = chatCard.querySelector('.chat-messages');
+        chatInput = chatCard.querySelector('.chat-input-area input');
+        sendChatBtn = chatCard.querySelector('.chat-input-area button');
+        function addBotMessage(text) {
+            let div = document.createElement('div');
+            div.className = 'msg-bubble bot-msg';
+            div.innerText = text;
+            chatMessagesDiv.appendChild(div);
+            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+        }
+        function addUserMessage(text) {
+            let div = document.createElement('div');
+            div.className = 'msg-bubble user-msg';
+            div.innerText = text;
+            chatMessagesDiv.appendChild(div);
+            chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+        }
+        function sendUserMessage() {
+            let msg = chatInput.value.trim();
+            if (!msg) return;
+            addUserMessage(msg);
+            chatInput.value = "";
+            setTimeout(() => { addBotMessage(getBotReply(msg)); }, 200);
+        }
+        sendChatBtn.addEventListener('click', sendUserMessage);
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendUserMessage(); });
+        if (chatMessagesDiv.children.length === 0) {
+            addBotMessage("🎀 嗨～ 无聊的时候戳戳我！(｡♡‿♡｡)");
+        }
+    }
+
+    function generateCardHTML(type) {
+        if (type === 'history') {
+            return `<div class="stack-card" data-type="history">
+                        <div class="note-header"><h3>📋 日 常 ☆ 镜 头：1. 2. 3 ●ｖ●</h3><button class="reset-small" id="clearHistoryBtnCard">清空记录</button></div>
+                        <ul class="history-list"></ul>
+                        <div style="font-size:0.7rem; text-align:center; margin-top:10px; color:#c88ba3;">𐌙𐌄𐌔, 𐌀𐌍𐌃?</div>
+                    </div>`;
+        } else if (type === 'chat') {
+            return `<div class="stack-card" data-type="chat">
+                        <div class="note-header"><h3>💬 ₊˚⋆♡̷☆너무 너무 좋아、</h3><div class="cute-tag">在发什么呆ᐞ･֊･ᐞฅ</div></div>
+                        <div class="chat-messages"></div>
+                        <div class="chat-input-area"><input type="text" placeholder="和D老师说句话吧..." autocomplete="off"><button>发送</button></div>
+                    </div>`;
+        } else {
+            return `<div class="stack-card" data-type="future">
+                        <div class="note-header"><h3>✨ 未完待续 · 小游戏站 ✨</h3><div class="cute-tag">coming soon...</div></div>
+                        <div class="future-content">
+                            <div style="font-size:3rem;">🎮✨</div>
+                            <div style="margin-top: 16px;">更多小游戏即将上线<br>敬请期待 💖</div>
+                        </div>
+                    </div>`;
+        }
+    }
+
+    function createCards() {
+        stackContainer.innerHTML = '';
+        const types = ['history', 'chat', 'future'];
+        for (let i = 0; i < types.length; i++) {
+            const type = types[i];
+            const cardDiv = document.createElement('div');
+            cardDiv.innerHTML = generateCardHTML(type);
+            const card = cardDiv.firstElementChild;
+            stackContainer.appendChild(card);
+            cards[type] = card;
+            if (type === 'chat') setupChatEvents(card);
+            else if (type === 'history') {
+                const clearBtn = card.querySelector('#clearHistoryBtnCard');
+                if (clearBtn) clearBtn.addEventListener('click', resetAllData);
+            }
+        }
+        updateStackOrder();
+    }
+
+    function updateStackOrder() {
+        for (let i = 0; i < cardOrder.length; i++) {
+            const type = cardOrder[i];
+            const card = cards[type];
+            if (!card) continue;
+            if (i === 0) {
+                card.classList.add('active');
+                card.classList.remove('next', 'bottom');
+            } else if (i === 1) {
+                card.classList.add('next');
+                card.classList.remove('active', 'bottom');
+            } else {
+                card.classList.add('bottom');
+                card.classList.remove('active', 'next');
+            }
+        }
+    }
+
+    function switchToNext() {
+        if (isAnimating) return;
+        isAnimating = true;
+        const currentTop = cardOrder[0];
+        const currentCard = cards[currentTop];
+        currentCard.classList.add('exit-active');
+        const newTop = cardOrder[1];
+        const newCard = cards[newTop];
+        newCard.classList.add('enter-active');
+        const onFinish = () => {
+            currentCard.classList.remove('exit-active');
+            newCard.classList.remove('enter-active');
+            const moved = cardOrder.shift();
+            cardOrder.push(moved);
+            updateStackOrder();
+            isAnimating = false;
+        };
+        currentCard.addEventListener('animationend', onFinish, { once: true });
+        newCard.addEventListener('animationend', onFinish, { once: true });
+        setTimeout(() => { if (isAnimating) onFinish(); }, 500);
+    }
+
+    function switchToPrev() {
+        if (isAnimating) return;
+        isAnimating = true;
+        const currentTop = cardOrder[0];
+        const currentCard = cards[currentTop];
+        currentCard.classList.add('exit-active');
+        const newTop = cardOrder[cardOrder.length - 1];
+        const newCard = cards[newTop];
+        newCard.classList.add('enter-active');
+        const onFinish = () => {
+            currentCard.classList.remove('exit-active');
+            newCard.classList.remove('enter-active');
+            const last = cardOrder.pop();
+            cardOrder.unshift(last);
+            updateStackOrder();
+            isAnimating = false;
+        };
+        currentCard.addEventListener('animationend', onFinish, { once: true });
+        newCard.addEventListener('animationend', onFinish, { once: true });
+        setTimeout(() => { if (isAnimating) onFinish(); }, 500);
+    }
+
+    // ========== 音乐模块 ==========
+    function updateMusicUI() {
+        if (currentMusicIndex >= 0 && musicList[currentMusicIndex]) {
+            currentSongTitleSpan.innerText = musicList[currentMusicIndex].name;
+        } else {
+            currentSongTitleSpan.innerText = "未播放";
+        }
+        songListDiv.innerHTML = musicList.map((song, idx) => `
+            <div class="song-item ${idx === currentMusicIndex ? 'now-playing' : ''}" data-idx="${idx}">
+                <span>🎵 ${song.name}</span>
+                <button class="delete-song" data-idx="${idx}">🗑️</button>
+            </div>
+        `).join('');
+        document.querySelectorAll('.song-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-song')) return;
+                const idx = parseInt(item.dataset.idx);
+                playMusic(idx);
+            });
+        });
+        document.querySelectorAll('.delete-song').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(btn.dataset.idx);
+                musicList.splice(idx, 1);
+                if (currentMusicIndex === idx) {
+                    audio.pause();
+                    isPlaying = false;
+                    currentMusicIndex = -1;
+                    playPauseBtn.innerHTML = "▶️";
+                } else if (currentMusicIndex > idx) {
+                    currentMusicIndex--;
+                }
+                if (musicList.length === 0) {
+                    currentMusicIndex = -1;
+                    currentSongTitleSpan.innerText = "未播放";
+                }
+                saveAllData();
+                updateMusicUI();
+            });
+        });
+        loopSingleBtn.classList.toggle('active', loopMode === 'single');
+        loopListBtn.classList.toggle('active', loopMode === 'list');
+        playPauseBtn.innerHTML = isPlaying ? "⏸️" : "▶️";
+    }
+
+    function playMusic(index) {
+        if (index < 0 || index >= musicList.length) return;
+        currentMusicIndex = index;
+        audio.src = musicList[currentMusicIndex].url;
+        audio.load();
+        audio.play().then(() => {
+            isPlaying = true;
+            updateMusicUI();
+        }).catch(err => console.warn("播放失败", err));
+        updateMusicUI();
+    }
+
+    function togglePlayPause() {
+        if (musicList.length === 0) { showToast("✨ 请先添加歌曲~", 1000); return; }
+        if (currentMusicIndex === -1 && musicList.length) {
+            playMusic(0);
+        } else if (isPlaying) {
+            audio.pause();
+            isPlaying = false;
+            updateMusicUI();
+        } else {
+            audio.play().then(() => {
+                isPlaying = true;
+                updateMusicUI();
+            }).catch(() => {});
+        }
+    }
+
+    function setLoopMode(mode) {
+        loopMode = mode;
+        updateMusicUI();
+    }
+
+    audio.addEventListener('ended', () => {
+        if (loopMode === 'single') {
+            audio.currentTime = 0;
+            audio.play();
+        } else if (loopMode === 'list') {
+            if (musicList.length > 0) {
+                let next = (currentMusicIndex + 1) % musicList.length;
+                playMusic(next);
+            }
+        } else {
+            isPlaying = false;
+            updateMusicUI();
+        }
+    });
+
+    function addSongFromUrl() {
+        let url = newSongUrlInput.value.trim();
+        if (!url) return;
+        let name = url.split('/').pop() || "未知歌曲";
+        name = name.replace(/\.[^/.]+$/, "").substring(0, 20);
+        musicList.push({ name: name, url: url });
+        saveAllData();
+        updateMusicUI();
+        newSongUrlInput.value = "";
+        showToast("🎶 歌曲已添加", 1000);
+    }
+
+    function attemptAutoPlay() {
+        if (autoPlayAttempted) return;
+        autoPlayAttempted = true;
+        if (musicList.length) {
+            playMusic(0);
+        }
+    }
+
+    function renderTaskEditList() {
+        taskEditListDiv.innerHTML = taskLibrary.map((task, idx) => `
+            <div class="task-edit-item">
+                <input type="text" value="${task.emoji}" data-field="emoji" data-idx="${idx}" style="width: 50px;">
+                <input type="text" value="${task.name}" data-field="name" data-idx="${idx}" style="flex:2;">
+                <input type="text" value="${task.desc}" data-field="desc" data-idx="${idx}" style="flex:3;">
+                <button data-delete-idx="${idx}">🗑️</button>
+            </div>
+        `).join('');
+        document.querySelectorAll('.task-edit-item input').forEach(inp => {
+            inp.addEventListener('change', (e) => {
+                const idx = parseInt(inp.dataset.idx);
+                const field = inp.dataset.field;
+                taskLibrary[idx][field] = inp.value;
+                saveAllData();
+                if (currentTask && currentTask.name === taskLibrary[idx].name) {
+                    taskEmojiSpan.innerText = currentTask.emoji;
+                    taskNameSpan.innerText = currentTask.name;
+                    taskDescSpan.innerText = currentTask.desc;
+                }
+            });
+        });
+        document.querySelectorAll('[data-delete-idx]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(btn.dataset.deleteIdx);
+                taskLibrary.splice(idx, 1);
+                saveAllData();
+                renderTaskEditList();
+                if (!taskLibrary.length) pickRandomTask();
+                else pickRandomTask();
+            });
+        });
+    }
+
+    function openTaskModal() {
+        renderTaskEditList();
+        taskModal.classList.add('show');
+    }
+    function closeTaskModal() {
+        taskModal.classList.remove('show');
+    }
+    function addNewTask() {
+        let emoji = newTaskEmoji.value.trim() || "✨";
+        let name = newTaskName.value.trim();
+        let desc = newTaskDesc.value.trim() || "一个自定义任务";
+        if (!name) { showToast("请输入任务名称", 1000); return; }
+        taskLibrary.push({ emoji, name, desc });
+        saveAllData();
+        renderTaskEditList();
+        newTaskEmoji.value = "✨";
+        newTaskName.value = "";
+        newTaskDesc.value = "";
+        showToast("✅ 新任务已添加", 1000);
+    }
+
+    function init() {
+        loadAllData();
+        if (!taskLibrary.length) taskLibrary = [...defaultTasks];
+        if (!currentTask) pickRandomTask();
+        else {
+            taskEmojiSpan.innerText = currentTask.emoji;
+            taskNameSpan.innerText = currentTask.name;
+            taskDescSpan.innerText = currentTask.desc;
+        }
+        randomBtn.addEventListener('click', () => {
+            pickRandomTask();
+            showToast("🎀 新任务降临！" + getRandomKaomoji(), 1200);
+            document.querySelector('.task-stage')?.classList.add('glow');
+            setTimeout(() => document.querySelector('.task-stage')?.classList.remove('glow'), 300);
+        });
+        completeBtn.addEventListener('click', completeCurrentTask);
+        resetDataBtn.addEventListener('click', resetAllData);
+        editTasksBtn.addEventListener('click', openTaskModal);
+        closeModalBtn.addEventListener('click', closeTaskModal);
+        addTaskModalBtn.addEventListener('click', addNewTask);
+        createCards();
+        updateHistoryUI();
+        const prevArrow = document.getElementById('prevNoteBtn');
+        const nextArrow = document.getElementById('nextNoteBtn');
+        prevArrow.addEventListener('click', switchToPrev);
+        nextArrow.addEventListener('click', switchToNext);
+        
+        // 音乐面板事件
+        musicToggle.addEventListener('click', () => {
+            musicPanel.classList.toggle('open');
+        });
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        loopSingleBtn.addEventListener('click', () => setLoopMode('single'));
+        loopListBtn.addEventListener('click', () => setLoopMode('list'));
+        addSongBtn.addEventListener('click', addSongFromUrl);
+        newSongUrlInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addSongFromUrl();
+            }
+        });
+        updateMusicUI();
+        
+        // 自动播放：首次用户交互时触发
+        const playOnFirstInteraction = () => {
+            attemptAutoPlay();
+            document.removeEventListener('click', playOnFirstInteraction);
+            document.removeEventListener('touchstart', playOnFirstInteraction);
+        };
+        document.addEventListener('click', playOnFirstInteraction);
+        document.addEventListener('touchstart', playOnFirstInteraction);
+        
+        // 点击其他区域关闭侧边栏和弹窗
+        document.addEventListener('click', (e) => {
+            if (!musicToggle.contains(e.target) && !musicPanel.contains(e.target) && musicPanel.classList.contains('open')) {
+                musicPanel.classList.remove('open');
+            }
+            if (!taskModal.contains(e.target) && e.target !== editTasksBtn && taskModal.classList.contains('show')) {
+                closeTaskModal();
+            }
+        });
+    }
+    init();
+</script>
+</body>
+</html>
